@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./HaversineForm.css"
+import "./HaversineForm.css";
 
 const HaversineForm = () => {
   const [pointA, setPointA] = useState("");
@@ -7,63 +7,50 @@ const HaversineForm = () => {
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const errorMessages = [
-    "Separate latitude and longtitude values with a comma for valid input.",
-    "Invalid input, too many commas.",
-    "Invalid input, must be a number.",
-    "Invalide input, Latitude must be between -90 and 90.",
-    "Invalide input, longtitude must be between -180 and 180.",
-  ];
+  const errorMessages = {
+    CommaNeeded:
+      "Separate latitude and longtitude values with a comma for valid input.",
+    TooManyCommas: "Invalid input, too many commas.",
+    NotValidNumber: "Invalid input, must be a number.",
+    NotInLatRange: "Invalide input, Latitude must be between -90 and 90.",
+    NotInLonRange: "Invalide input, longtitude must be between -180 and 180.",
+  };
 
-  function isValidCommas(userInputString) {
-    let commaCount = 0;
-    for (const char of userInputString) {
-      if (char === ",") {
-        commaCount += 1;
-      }
-    }
+  function getStringPartsFromInput(userInputString) {
+    let pieces = userInputString.split(",");
+    const commaCount = pieces.length;
+
     if (commaCount < 1) {
-      setErrorMessage(errorMessages[0]);
-      return false;
+      return {isSuccess: false, errorMessage: errorMessages.CommaNeeded};
     }
     if (commaCount > 1) {
-      setErrorMessage(errorMessages[1]);
-      return false;
-    } else {
-      return true;
+      return {isSuccess: false, errorMessage: errorMessages.CommaNeeded};
+    } 
+    return {isSuccess: true, value: pieces};
+  }
+
+  function getValidCoordinates(parts) {
+    const [latitude, longitude] = parseFloat(parts);
+    if(isNaN(latitude) || isNaN(longitude)) {
+      return {isSuccess: false, errorMessage: errorMessages.NotValidNumber};
     }
-  }
 
-  function separateUserInputStr(userInputString) {
-    const commaIndex = userInputString.indexOf(",");
-    const latStr = userInputString.substring(0, commaIndex);
-    const lonStr = userInputString.substring(commaIndex + 1);
-    return [latStr, lonStr];
-  }
-
-  function areNumsValid(userInputString) {
-    let coord = separateUserInputStr(userInputString);
-    for (let i = 0; i < coord.length; i++) {
-      if (isNaN(parseFloat(coord[i]))) {
-        setErrorMessage(errorMessages[2]);
-        return false;
-      }
-      if (i === 0 && Math.abs(coord[i]) > 90) {
-        setErrorMessage(errorMessages[3]);
-        return false;
-      }
-      if (i === 1 && Math.abs(coord[i]) > 180) {
-        setErrorMessage(errorMessages[4]);
-        return false;
-      }
+    if(Math.abs(latitude) > 90){
+      return {isSuccess: false, errorMessage: errorMessages.NotInLatRange};
     }
-    return true;
+    if(Math.abs(latitude) > 180){
+      return {isSuccess: false, errorMessage: errorMessages.NotInLonRange};
+    }
+    
+    return {isSuccess: true, value: {latitude, longitude}};
   }
 
-  function validateUserInput(userInputString) {
+  function getValidUserInput(userInputString) {
+    const getPartsResult = getStringPartsFromInput(userInputString);
+    if(!getPartsResult.isSuccess) return getPartsResult;
+    const parts = getPartsResult.value;
     if (
-      isValidCommas(userInputString) === true &&
-      areNumsValid(userInputString) === true
+      getValidCoordinates(userInputString) === true
     ) {
       return true;
     } else {
@@ -107,7 +94,7 @@ const HaversineForm = () => {
   function checkValidParseInputCalcDist(string1, string2) {
     const coordinates = [string1, string2];
     for (const string of coordinates) {
-      if (!validateUserInput(string)) {
+      if (!getValidUserInput(string)) {
         return false;
       }
     }
@@ -115,24 +102,24 @@ const HaversineForm = () => {
   }
 
   const handleSubmit = (e) => {
-    setErrorMessage("")
+    setErrorMessage("");
     e.preventDefault();
     let distance = checkValidParseInputCalcDist(pointA, pointB);
     if (distance) {
       setResult(distance);
     }
   };
-const reset = (()=>{
+  const reset = () => {
     setPointA("");
     setPointB("");
     setResult(null);
     setErrorMessage("");
-})
+  };
   return (
     <div className="formContainer">
       <form onSubmit={handleSubmit}>
         <label>
-          Point A:
+          Point A
           <input
             type="text"
             value={pointA}
@@ -141,7 +128,7 @@ const reset = (()=>{
         </label>
         <br />
         <label>
-          Point B:
+          Point B
           <input
             type="text"
             value={pointB}
@@ -150,7 +137,9 @@ const reset = (()=>{
         </label>
         <br />
         <button type="submit">Calculate</button>
-        <button type="button" onClick={()=>reset()}>Reset</button>
+        <button type="button" onClick={() => reset()}>
+          Reset
+        </button>
       </form>
       <div className="resultsContainer">
         {errorMessage ? <p>{errorMessage}</p> : ""}
