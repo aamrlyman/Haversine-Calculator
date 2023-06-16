@@ -132,7 +132,7 @@ const reset = (()=>{
     <div className="formContainer">
       <form onSubmit={handleSubmit}>
         <label>
-          Point A:
+          Point A 
           <input
             type="text"
             value={pointA}
@@ -141,7 +141,7 @@ const reset = (()=>{
         </label>
         <br />
         <label>
-          Point B:
+          Point B 
           <input
             type="text"
             value={pointB}
