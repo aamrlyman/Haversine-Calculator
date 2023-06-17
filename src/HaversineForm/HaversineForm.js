@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./HaversineForm.css"
+import "./HaversineForm.css";
 
 const HaversineForm = () => {
   const [pointA, setPointA] = useState("");
@@ -7,76 +7,61 @@ const HaversineForm = () => {
   const [result, setResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const errorMessages = [
-    "Separate latitude and longtitude values with a comma for valid input.",
-    "Invalid input, too many commas.",
-    "Invalid input, must be a number.",
-    "Invalide input, Latitude must be between -90 and 90.",
-    "Invalide input, longtitude must be between -180 and 180.",
-  ];
+  const errorMessages = {
+    CommaNeeded: "Separate latitude and longtitude values with a comma for valid input.",
+    InputNeeded: "No input provided",
+    TooManyCommas: "Invalid input, too many commas.",
+    LatNotValidNumber: "Invalid input, latitude must be a number.",
+    LonNotValidNumber: "Invalid input, longtitude must be a number.",
+    NotInLatRange: "Invalide input, latitude must be between -90 and 90.",
+    NotInLonRange: "Invalide input, longtitude must be between -180 and 180.",
+  };
 
-  function isValidCommas(userInputString) {
-    let commaCount = 0;
-    for (const char of userInputString) {
-      if (char === ",") {
-        commaCount += 1;
-      }
+  function getStringPartsFromInput(userInputString) {
+    let coordinatesArr = userInputString.split(",");
+    const commaCount = coordinatesArr.length;
+
+    if (coordinatesArr[0] === "")
+      return { isSuccess: false, errorMessage: errorMessages.InputNeeded };
+    if (commaCount === 1) {
+      return { isSuccess: false, errorMessage: errorMessages.CommaNeeded };
     }
-    if (commaCount < 1) {
-      setErrorMessage(errorMessages[0]);
-      return false;
+    if (commaCount > 2) {
+      return { isSuccess: false, errorMessage: errorMessages.TooManyCommas };
     }
-    if (commaCount > 1) {
-      setErrorMessage(errorMessages[1]);
-      return false;
-    } else {
-      return true;
-    }
+    return { isSuccess: true, value: coordinatesArr };
   }
 
-  function separateUserInputStr(userInputString) {
-    const commaIndex = userInputString.indexOf(",");
-    const latStr = userInputString.substring(0, commaIndex);
-    const lonStr = userInputString.substring(commaIndex + 1);
-    return [latStr, lonStr];
-  }
-
-  function areNumsValid(userInputString) {
-    let coord = separateUserInputStr(userInputString);
-    for (let i = 0; i < coord.length; i++) {
-      if (isNaN(parseFloat(coord[i]))) {
-        setErrorMessage(errorMessages[2]);
-        return false;
-      }
-      if (i === 0 && Math.abs(coord[i]) > 90) {
-        setErrorMessage(errorMessages[3]);
-        return false;
-      }
-      if (i === 1 && Math.abs(coord[i]) > 180) {
-        setErrorMessage(errorMessages[4]);
-        return false;
-      }
+  function getValidCoordinates(coordinatesArr) {
+    const latitude = parseFloat(coordinatesArr[0]);
+    const longtitude = parseFloat(coordinatesArr[1]);
+    if (isNaN(latitude)) {
+      return {
+        isSuccess: false,
+        errorMessage: errorMessages.LatNotValidNumber,
+      };
     }
-    return true;
-  }
-
-  function validateUserInput(userInputString) {
-    if (
-      isValidCommas(userInputString) === true &&
-      areNumsValid(userInputString) === true
-    ) {
-      return true;
-    } else {
-      return false;
+    if (isNaN(longtitude)) {
+      return {
+        isSuccess: false,
+        errorMessage: errorMessages.LonNotValidNumber,
+      };
     }
+    if (Math.abs(latitude) > 90) {
+      return { isSuccess: false, errorMessage: errorMessages.NotInLatRange };
+    }
+    if (Math.abs(longtitude) > 180) {
+      return { isSuccess: false, errorMessage: errorMessages.NotInLonRange };
+    }
+    return { isSuccess: true, value: [latitude, longtitude] };
   }
 
-  function parseUserInput(userInputString) {
-    let strCoord = separateUserInputStr(userInputString);
-    let numCoord = [];
-    numCoord[0] = parseFloat(strCoord[0]);
-    numCoord[1] = parseFloat(strCoord[1]);
-    return numCoord;
+  function getValidUserInput(userInputString) {
+    const coordinatesArrResult = getStringPartsFromInput(userInputString);
+    if (!coordinatesArrResult.isSuccess) return coordinatesArrResult;
+    const coordinatesArr = coordinatesArrResult.value;
+    const validCoordinates = getValidCoordinates(coordinatesArr);
+    return validCoordinates;
   }
 
   function toRadians(degrees) {
@@ -104,53 +89,60 @@ const HaversineForm = () => {
     return `${roundedDistInKm}km`;
   }
 
-  function checkValidParseInputCalcDist(string1, string2) {
-    const coordinates = [string1, string2];
-    for (const string of coordinates) {
-      if (!validateUserInput(string)) {
-        return false;
-      }
+  function checkValidParseInputCalcDist(userInputStr1, userInputStr2) {
+    const coord1 = getValidUserInput(userInputStr1);
+    if (!coord1.isSuccess) {
+      return setErrorMessage(coord1.errorMessage);
     }
-    return haversine(parseUserInput(string1), parseUserInput(string2));
+    const coord2 = getValidUserInput(userInputStr2);
+    if (!coord2.isSuccess) {
+      return setErrorMessage(coord2.errorMessage);
+    }
+
+    return haversine(coord1.value, coord2.value);
   }
 
   const handleSubmit = (e) => {
-    setErrorMessage("")
+    setErrorMessage("");
     e.preventDefault();
     let distance = checkValidParseInputCalcDist(pointA, pointB);
     if (distance) {
       setResult(distance);
     }
   };
-const reset = (()=>{
+  const reset = () => {
     setPointA("");
     setPointB("");
     setResult(null);
     setErrorMessage("");
-})
+  };
   return (
     <div className="formContainer">
       <form onSubmit={handleSubmit}>
         <label>
-          Point A 
+          Point A
           <input
             type="text"
             value={pointA}
             onChange={(e) => setPointA(e.target.value)}
+            placeholder="eg. 1.024, 34.578"
           />
         </label>
         <br />
         <label>
-          Point B 
+          Point B
           <input
             type="text"
             value={pointB}
+            placeholder="eg. 46.024, 24.578"
             onChange={(e) => setPointB(e.target.value)}
           />
         </label>
         <br />
         <button type="submit">Calculate</button>
-        <button type="button" onClick={()=>reset()}>Reset</button>
+        <button type="button" onClick={() => reset()}>
+          Reset
+        </button>
       </form>
       <div className="resultsContainer">
         {errorMessage ? <p>{errorMessage}</p> : ""}
