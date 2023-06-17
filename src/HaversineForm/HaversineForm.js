@@ -8,62 +8,60 @@ const HaversineForm = () => {
   const [errorMessage, setErrorMessage] = useState("");
 
   const errorMessages = {
-    CommaNeeded:
-      "Separate latitude and longtitude values with a comma for valid input.",
+    CommaNeeded: "Separate latitude and longtitude values with a comma for valid input.",
+    InputNeeded: "No input provided",
     TooManyCommas: "Invalid input, too many commas.",
-    NotValidNumber: "Invalid input, must be a number.",
-    NotInLatRange: "Invalide input, Latitude must be between -90 and 90.",
+    LatNotValidNumber: "Invalid input, latitude must be a number.",
+    LonNotValidNumber: "Invalid input, longtitude must be a number.",
+    NotInLatRange: "Invalide input, latitude must be between -90 and 90.",
     NotInLonRange: "Invalide input, longtitude must be between -180 and 180.",
   };
 
   function getStringPartsFromInput(userInputString) {
-    let pieces = userInputString.split(",");
-    const commaCount = pieces.length;
+    let coordinatesArr = userInputString.split(",");
+    const commaCount = coordinatesArr.length;
 
-    if (commaCount < 1) {
-      return {isSuccess: false, errorMessage: errorMessages.CommaNeeded};
+    if (coordinatesArr[0] === "")
+      return { isSuccess: false, errorMessage: errorMessages.InputNeeded };
+    if (commaCount === 1) {
+      return { isSuccess: false, errorMessage: errorMessages.CommaNeeded };
     }
-    if (commaCount > 1) {
-      return {isSuccess: false, errorMessage: errorMessages.CommaNeeded};
-    } 
-    return {isSuccess: true, value: pieces};
+    if (commaCount > 2) {
+      return { isSuccess: false, errorMessage: errorMessages.TooManyCommas };
+    }
+    return { isSuccess: true, value: coordinatesArr };
   }
 
-  function getValidCoordinates(parts) {
-    const [latitude, longitude] = parseFloat(parts);
-    if(isNaN(latitude) || isNaN(longitude)) {
-      return {isSuccess: false, errorMessage: errorMessages.NotValidNumber};
+  function getValidCoordinates(coordinatesArr) {
+    const latitude = parseFloat(coordinatesArr[0]);
+    const longtitude = parseFloat(coordinatesArr[1]);
+    if (isNaN(latitude)) {
+      return {
+        isSuccess: false,
+        errorMessage: errorMessages.LatNotValidNumber,
+      };
     }
-
-    if(Math.abs(latitude) > 90){
-      return {isSuccess: false, errorMessage: errorMessages.NotInLatRange};
+    if (isNaN(longtitude)) {
+      return {
+        isSuccess: false,
+        errorMessage: errorMessages.LonNotValidNumber,
+      };
     }
-    if(Math.abs(latitude) > 180){
-      return {isSuccess: false, errorMessage: errorMessages.NotInLonRange};
+    if (Math.abs(latitude) > 90) {
+      return { isSuccess: false, errorMessage: errorMessages.NotInLatRange };
     }
-    
-    return {isSuccess: true, value: {latitude, longitude}};
+    if (Math.abs(longtitude) > 180) {
+      return { isSuccess: false, errorMessage: errorMessages.NotInLonRange };
+    }
+    return { isSuccess: true, value: [latitude, longtitude] };
   }
 
   function getValidUserInput(userInputString) {
-    const getPartsResult = getStringPartsFromInput(userInputString);
-    if(!getPartsResult.isSuccess) return getPartsResult;
-    const parts = getPartsResult.value;
-    if (
-      getValidCoordinates(userInputString) === true
-    ) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  function parseUserInput(userInputString) {
-    let strCoord = separateUserInputStr(userInputString);
-    let numCoord = [];
-    numCoord[0] = parseFloat(strCoord[0]);
-    numCoord[1] = parseFloat(strCoord[1]);
-    return numCoord;
+    const coordinatesArrResult = getStringPartsFromInput(userInputString);
+    if (!coordinatesArrResult.isSuccess) return coordinatesArrResult;
+    const coordinatesArr = coordinatesArrResult.value;
+    const validCoordinates = getValidCoordinates(coordinatesArr);
+    return validCoordinates;
   }
 
   function toRadians(degrees) {
@@ -91,14 +89,17 @@ const HaversineForm = () => {
     return `${roundedDistInKm}km`;
   }
 
-  function checkValidParseInputCalcDist(string1, string2) {
-    const coordinates = [string1, string2];
-    for (const string of coordinates) {
-      if (!getValidUserInput(string)) {
-        return false;
-      }
+  function checkValidParseInputCalcDist(userInputStr1, userInputStr2) {
+    const coord1 = getValidUserInput(userInputStr1);
+    if (!coord1.isSuccess) {
+      return setErrorMessage(coord1.errorMessage);
     }
-    return haversine(parseUserInput(string1), parseUserInput(string2));
+    const coord2 = getValidUserInput(userInputStr2);
+    if (!coord2.isSuccess) {
+      return setErrorMessage(coord2.errorMessage);
+    }
+
+    return haversine(coord1.value, coord2.value);
   }
 
   const handleSubmit = (e) => {
@@ -124,6 +125,7 @@ const HaversineForm = () => {
             type="text"
             value={pointA}
             onChange={(e) => setPointA(e.target.value)}
+            placeholder="eg. 1.024, 34.578"
           />
         </label>
         <br />
@@ -132,6 +134,7 @@ const HaversineForm = () => {
           <input
             type="text"
             value={pointB}
+            placeholder="eg. 46.024, 24.578"
             onChange={(e) => setPointB(e.target.value)}
           />
         </label>
